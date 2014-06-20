@@ -1,0 +1,299 @@
+<!doctype html>
+<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
+<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on http://github.com/jonrohan -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen"/>
+  <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="javascripts/script.js"></script>
+
+  <title>Pml</title>
+  <meta name="description" content="Practical Machine Learning">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <h1 class="title">Pml</h1>
+    </header>
+    <div id="container">
+      <p class="tagline">Practical Machine Learning</p>
+      <div id="main" role="main">
+        <div class="download-bar">
+        <div class="inner">
+          <a href="https://github.com/bimehta/PML/tarball/master" class="download-button tar"><span>Download</span></a>
+          <a href="https://github.com/bimehta/PML/zipball/master" class="download-button zip"><span>Download</span></a>
+          <a href="https://github.com/bimehta/PML" class="code">View Pml on GitHub</a>
+        </div>
+        <span class="blc"></span><span class="trc"></span>
+        </div>
+        <article class="markdown-body">
+          
+
+<p></p>
+
+<p></p>
+
+<h1>
+<a name="prediction-assignment---human-activity-recognition-for-weight-lifting-exercise" class="anchor" href="#prediction-assignment---human-activity-recognition-for-weight-lifting-exercise"><span class="octicon octicon-link"></span></a>Prediction Assignment - Human Activity Recognition for Weight Lifting Exercise</h1>
+
+<h2>
+<a name="synopsis" class="anchor" href="#synopsis"><span class="octicon octicon-link"></span></a>Synopsis</h2>
+
+<p>This particular document is aimed at predicting how well an activity was performed by a particular participant in a weight lifting exercise.Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this document I have used data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.The data is available at 
+<a href="http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201">Weight Lifting Excerice Data</a>
+I have used Machine Learning algorithms in R to predict the class of WLE dataset. I have first pre processed the data to remove unwanted variables and than used different algorithms on train data to see model accuracy and selected the best among them. Cross Validation set was used for finding out of sample error. Finally I ran my model fit on the testing data provided to check the accuracy.</p>
+
+<h2>
+<a name="data-processing-and-cleaning" class="anchor" href="#data-processing-and-cleaning"><span class="octicon octicon-link"></span></a>Data Processing and Cleaning</h2>
+
+<p>In this section we read the raw data from the source we obtained, summarize the data and finally transform and clean the data for our prediction based on which we derive our results and make conclusion.</p>
+
+<p>As a first step here, I am cleaning the data to remove all columns having NA values. This gives me 59 predictor variables for prediction variable “classe”. Post that I am removing the variables that I don't think will help much in prediction. Since this is sensor data related prediction we discard the data that we think wont have impact on sensor measure, under certain assumptions. The first 7 variables “X”, “user_name”, “raw_timestamp_part_1”, “raw_timestamp_part_2”, “cvtd_timestamp”, “new_window”, “num_window” are omitted. They don't appear to be related with sensor reading and are mostly the characteristics of the individual undergoing weight lifting exercise. Hence removing them makes sense.</p>
+
+<pre><code>## Setting the working directory.
+setwd("C:\\Users\\bimehta\\Desktop\\R_Prog\\Machine Learning\\Assignment")
+## Reading the Raw Data and making blank values NA
+trainingDataRaw &lt;- read.csv("pml-training.csv", header = TRUE, na.strings = c("NA", 
+    ""))
+testingDataRaw &lt;- read.csv("pml-testing.csv", header = TRUE, na.strings = c("NA", 
+    ""))
+## Removing columns with at least one NA value
+cleanTrainingData &lt;- trainingDataRaw[, colSums(is.na(trainingDataRaw)) == 0]
+finalTrainingData &lt;- cleanTrainingData[, 8:60]
+cleanTestingData &lt;- testingDataRaw[, colSums(is.na(testingDataRaw)) == 0]
+finalTestingData &lt;- cleanTestingData[, 8:60]
+</code></pre>
+
+<h3>
+<a name="summarizing-data" class="anchor" href="#summarizing-data"><span class="octicon octicon-link"></span></a>Summarizing Data</h3>
+
+<p>Here we see what is the size of data and what the data looks like and what is the structure of data</p>
+
+<pre><code>## Finding Number of Variables and Observations
+dim(finalTrainingData)
+</code></pre>
+
+<pre><code>## [1] 19622    53
+</code></pre>
+
+<h3>
+<a name="creating-training-and-cross-validation-sets" class="anchor" href="#creating-training-and-cross-validation-sets"><span class="octicon octicon-link"></span></a>Creating Training and Cross Validation Sets</h3>
+
+<p>Next I have done is created 2 subsets of data based on “classe”. One is training data set which will be used to create the model fit and the other is cross validation data set which will be used to calculate Out of Sample Error.</p>
+
+<pre><code>library(caret)
+</code></pre>
+
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2
+</code></pre>
+
+<pre><code>inBuild &lt;- createDataPartition(y = finalTrainingData$classe, p = 0.7, list = FALSE)
+validation &lt;- finalTrainingData[-inBuild, ]
+training &lt;- finalTrainingData[inBuild, ]
+dim(training)
+</code></pre>
+
+<pre><code>## [1] 13737    53
+</code></pre>
+
+<pre><code>dim(validation)
+</code></pre>
+
+<pre><code>## [1] 5885   53
+</code></pre>
+
+<h2>
+<a name="model-building" class="anchor" href="#model-building"><span class="octicon octicon-link"></span></a>Model Building</h2>
+
+<p>I used two different algorithms here to see which one gives better accuracy. The first algorithm I used is Random Forest. The 2nd model I used was using the Boosting method.
+Based on the accuracy of the 2 models I have selected the one with higher accuracy and calculated Out of Sample Error in Results section</p>
+
+<pre><code>## Creating RF mdoel, predicting and calculating Confusion Matrix on Cross
+## Validaton Set
+set.seed(6677)
+modFitRF &lt;- train(classe ~ ., method = "rf", data = training, trControl = trainControl(method = "cv", 
+    number = 4))
+</code></pre>
+
+<pre><code>## Loading required package: randomForest
+## randomForest 4.6-7
+## Type rfNews() to see new features/changes/bug fixes.
+</code></pre>
+
+<pre><code>modFitRF
+</code></pre>
+
+<pre><code>## Random Forest 
+## 
+## 13737 samples
+##    52 predictors
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 10304, 10302, 10303, 10302 
+## 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy  Kappa  Accuracy SD  Kappa SD
+##   2     1         1      0.002        0.002   
+##   30    1         1      0.002        0.002   
+##   50    1         1      0.003        0.004   
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 27.
+</code></pre>
+
+<pre><code>validateRF &lt;- predict(modFitRF, newdata = validation)
+crf &lt;- confusionMatrix(validateRF, validation$classe)
+
+## Creating GBM model, predicting and calculating Confusion Matrix on Cross
+## Validaton Set
+set.seed(6688)
+modFitGBM &lt;- train(classe ~ ., method = "gbm", data = training, trControl = trainControl(method = "cv", 
+    number = 4), verbose = FALSE)
+</code></pre>
+
+<pre><code>## Loading required package: gbm
+## Loading required package: survival
+## Loading required package: splines
+## 
+## Attaching package: 'survival'
+## 
+## The following object is masked from 'package:caret':
+## 
+##     cluster
+## 
+## Loading required package: parallel
+## Loaded gbm 2.1
+## Loading required package: plyr
+</code></pre>
+
+<pre><code>modFitGBM
+</code></pre>
+
+<pre><code>## Stochastic Gradient Boosting 
+## 
+## 13737 samples
+##    52 predictors
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (4 fold) 
+## 
+## Summary of sample sizes: 10304, 10302, 10302, 10303 
+## 
+## Resampling results across tuning parameters:
+## 
+##   interaction.depth  n.trees  Accuracy  Kappa  Accuracy SD  Kappa SD
+##   1                  50       0.8       0.7    0.009        0.01    
+##   1                  100      0.8       0.8    0.008        0.01    
+##   1                  200      0.9       0.8    0.006        0.008   
+##   2                  50       0.9       0.8    0.004        0.005   
+##   2                  100      0.9       0.9    0.005        0.007   
+##   2                  200      0.9       0.9    0.006        0.007   
+##   3                  50       0.9       0.9    0.002        0.002   
+##   3                  100      0.9       0.9    0.004        0.004   
+##   3                  200      1         0.9    0.002        0.003   
+## 
+## Tuning parameter 'shrinkage' was held constant at a value of 0.1
+## Accuracy was used to select the optimal model using  the largest value.
+## The final values used for the model were n.trees = 150,
+##  interaction.depth = 3 and shrinkage = 0.1.
+</code></pre>
+
+<pre><code>validateGBM &lt;- predict(modFitGBM, newdata = validation)
+cgbm &lt;- confusionMatrix(validateGBM, validation$classe)
+</code></pre>
+
+<h2>
+<a name="results" class="anchor" href="#results"><span class="octicon octicon-link"></span></a>Results</h2>
+
+<p>The accuracy for 2 models on Cross Validation set is shown below:</p>
+
+<pre><code>## Random Forest Accuracy on Cross Validation Set
+crf$overall[1]
+</code></pre>
+
+<pre><code>## Accuracy 
+##   0.9947
+</code></pre>
+
+<pre><code>## Boosting Model Accuracy
+cgbm$overall[1]
+</code></pre>
+
+<pre><code>## Accuracy 
+##   0.9638
+</code></pre>
+
+<p>Based on the above we see that Random Forest model is a better fit for the given data.
+The out of sample error for Cross Validation Set is as below. As we see Out of Sample error is very small and is less than 1% indicating a very good fit.</p>
+
+<pre><code>(1 - (sum(validateRF == validation$classe)/length(validateRF))) * 100
+</code></pre>
+
+<pre><code>## [1] 0.5268
+</code></pre>
+
+<h2>
+<a name="test-set-prediction" class="anchor" href="#test-set-prediction"><span class="octicon octicon-link"></span></a>Test Set Prediction</h2>
+
+<p>Based on the RF output, I have generated the Prediction on the Test Set and saved it in directory as shown below for submission.</p>
+
+<pre><code>testRF &lt;- predict(modFitRF, newdata = finalTestingData)
+pml_write_files = function(x) {
+    n = length(x)
+    for (i in 1:n) {
+        filename = paste0("problem_id_", i, ".txt")
+        write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, 
+            col.names = FALSE)
+    }
+}
+pml_write_files(testRF)
+</code></pre>
+
+<h2>
+<a name="conclusion" class="anchor" href="#conclusion"><span class="octicon octicon-link"></span></a>Conclusion</h2>
+
+<p>Based on the above analysis we were able to obtain a very good predictor model using Random Forest Algorithm. The model worked well on Cross Validation set giving high accuracy and small out of sample error.
+Using that model we were able to predict the values on our Test Set.
+If we look at the output of Random Forest model we can see that only 2 variables are good enough predictors to give us high accuracy. It would be worthwhile to find those 2 predictors and build a model and see whether its true or not. There is a good scope of further exploration here.</p>
+
+<p></p>
+
+<p></p>
+        </article>
+      </div>
+    </div>
+    <footer>
+      <div class="owner">
+      <p><a href="https://github.com/bimehta" class="avatar"><img src="https://avatars2.githubusercontent.com/u/7298669?s=60" width="48" height="48"/></a> <a href="https://github.com/bimehta">bimehta</a> maintains <a href="https://github.com/bimehta/PML">Pml</a></p>
+
+
+      </div>
+      <div class="creds">
+        <small>This page generated using <a href="http://pages.github.com/">GitHub Pages</a><br/>theme by <a href="https://twitter.com/jonrohan/">Jon Rohan</a></small>
+      </div>
+    </footer>
+  </div>
+  <div class="current-section">
+    <a href="#top">Scroll to top</a>
+    <a href="https://github.com/bimehta/PML/tarball/master" class="tar">tar</a><a href="https://github.com/bimehta/PML/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
+    <p class="name"></p>
+  </div>
+
+  
+</body>
+</html>
